@@ -7,6 +7,8 @@ idf_component_register(SRCS "main.c"
                     logger 
                     button 
                     menu 
+                    nvs_manager
                     wifi
                     mqtt_manager
+                    uart_manager
                     )

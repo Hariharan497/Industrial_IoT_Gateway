@@ -7,12 +7,14 @@
 #include "logger.h"
 #include "button.h"
 #include "menu.h"
-//#include "driver/i2c_master.h"
+#include "nvs_manager.h"
+// #include "driver/i2c_master.h"
 #include "wifi.h"
 #include "mqtt_manager.h"
+#include "uart_manager.h"
 
-
-void app_main(void){
+void app_main(void)
+{
 
     i2c_master_bus_handle_t bus_handle;
 
@@ -20,12 +22,13 @@ void app_main(void){
 
     status = i2c_init(&bus_handle);
 
-    if(status != APP_OK){
+    if (status != APP_OK)
+    {
         log_write(LOG_INFO, "MAIN", "I2C INILIALIZED FAILED");
     }
 
     button_init();
-    
+
     display_init(bus_handle);
 
     event_manager_init();
@@ -34,15 +37,34 @@ void app_main(void){
 
     application_start();
 
-    app_event_msg_t event ;
+    app_event_msg_t event;
     event.event = APP_EVENT_BOOT;
-    
+
     event_manager_post(&event);
 
     menu_init();
 
+    nvs_manager_init();
+
     wifi_init();
 
-    mqtt_init();   
+    mqtt_init();
 
+    uart_manager_init();
+
+
+    nvs_manager_write_string(
+        "test",
+        "message",
+        "Hello NVS");
+
+    char message[32];
+
+    nvs_manager_read_string(
+        "test",
+        "message",
+        message,
+        sizeof(message));
+
+    ESP_LOGI("APP", "NVS DATA: %s", message);
 }

@@ -17,8 +17,6 @@
 #include "esp_event.h"
 #include "esp_log.h"
 
-#include "nvs.h"
-#include "nvs_flash.h"
 
 #include "lwip/err.h"
 #include "lwip/sys.h"
@@ -31,8 +29,8 @@
 #define TAG "WI-FI"
 
 // WiFi Credentials
-#define WIFI_SSID      "HARIHARAN" 
-#define WIFI_PASS      "thanya02"
+#define WIFI_SSID "HARIHARAN"
+#define WIFI_PASS "thanya02"
 
 static wifi_info_t wifi_info;
 
@@ -44,8 +42,8 @@ static void wifi_event_handler(
     void *event_data)
 {
     // WiFi Started
-    if(event_base == WIFI_EVENT &&
-       event_id == WIFI_EVENT_STA_START)
+    if (event_base == WIFI_EVENT &&
+        event_id == WIFI_EVENT_STA_START)
     {
         ESP_LOGI(TAG, "WiFi Started");
 
@@ -53,8 +51,8 @@ static void wifi_event_handler(
     }
 
     // WiFi Connected
-    else if(event_base == WIFI_EVENT &&
-            event_id == WIFI_EVENT_STA_CONNECTED)
+    else if (event_base == WIFI_EVENT &&
+             event_id == WIFI_EVENT_STA_CONNECTED)
     {
         ESP_LOGI(TAG, "Connected to Router");
 
@@ -71,38 +69,74 @@ static void wifi_event_handler(
     }
 
     // IP Address Received
-    else if(event_base == IP_EVENT &&
-            event_id == IP_EVENT_STA_GOT_IP)
+    else if (event_base == IP_EVENT &&
+             event_id == IP_EVENT_STA_GOT_IP)
     {
         ip_event_got_ip_t *event =
-            (ip_event_got_ip_t *) event_data;
+            (ip_event_got_ip_t *)event_data;
 
         ESP_LOGI(TAG, "Got IP Address");
 
         ESP_LOGI(TAG, "IP: " IPSTR,
                  IP2STR(&event->ip_info.ip));
 
-        strcpy(wifi_info.ip, &event->ip_info.ip) ;       
-
+        strcpy(wifi_info.ip, &event->ip_info.ip);
     }
 
     // WiFi Disconnected
-    else if(event_base == WIFI_EVENT &&
-            event_id == WIFI_EVENT_STA_DISCONNECTED)
+    else if (event_base == WIFI_EVENT &&
+             event_id == WIFI_EVENT_STA_DISCONNECTED)
     {
-		
-		wifi_event_sta_disconnected_t *event = (wifi_event_sta_disconnected_t *) event_data;
-		
+
+        wifi_event_sta_disconnected_t *event = (wifi_event_sta_disconnected_t *)event_data;
+
         ESP_LOGW(TAG, "Disconnect reason: %d",
-         event->reason);
+                 event->reason);
 
         // Retry Connection
         ESP_LOGI(TAG, "Retrying Connection...");
 
-        esp_wifi_connect();
+        wifi_event_sta_disconnected_t *disc =
+            (wifi_event_sta_disconnected_t *)event_data;
+
+        ESP_LOGW(TAG, "Disconnect reason: %d", disc->reason);
+
+        switch (disc->reason)
+        {
+        case WIFI_REASON_NO_AP_FOUND:
+            ESP_LOGW(TAG, "Disconnect reason: %s", "WIFI_REASON_NO_AP_FOUND");
+            break;
+        case WIFI_REASON_BEACON_TIMEOUT:
+            ESP_LOGW(TAG, "Disconnect reason: %s", "WIFI_REASON_BEACON_TIMEOUT");
+            break;
+        case WIFI_REASON_CONNECTION_FAIL:
+            // Retry later
+
+            app_event_msg_t event_msg;
+
+            sprintf(event_msg.data.display.lines[0], "%s", "wifi");
+            sprintf(event_msg.data.display.lines[1], "%s", "disconnected");
+            event_msg.data.display.line_count = 2;
+
+            event_msg.event = APP_EVENT_WIFI_DISCONNECTED;
+            event_manager_post(&event_msg);
+            ESP_LOGW(TAG, "Disconnect reason: %s", "WIFI_REASON_CONNECTION_FAIL");
+            break;
+
+        case WIFI_REASON_AUTH_FAIL:
+            ESP_LOGW(TAG, "Disconnect reason: %s", "WIFI_REASON_AUTH_FAIL");
+            break;
+        case WIFI_REASON_HANDSHAKE_TIMEOUT:
+            ESP_LOGW(TAG, "Disconnect reason: %s", "WIFI_REASON_NO_AP_FOUND");
+            // Don't retry forever
+            break;
+
+        default:
+            ESP_LOGW(TAG, "Disconnect reason: %s", "SOmething wrong");
+            break;
+        }
     }
 }
-
 
 app_status_t wifi_scan()
 {
@@ -135,14 +169,16 @@ app_status_t wifi_init()
 
     ESP_LOGI(TAG, "ESP 32 WI-FI init");
 
-    esp_err_t ret = nvs_flash_init();
+    // esp_err_t ret = nvs_flash_init();
 
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
-        ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
-    {
-        nvs_flash_erase();
-        nvs_flash_init();
-    };
+    // if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
+    //     ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
+    // {
+    //     nvs_flash_erase();
+    //     nvs_flash_init();
+    // };
+
+
 
     // Initialize TCP/IP Stack
     ESP_ERROR_CHECK(esp_netif_init());
@@ -188,23 +224,29 @@ app_status_t wifi_start()
             .ssid = WIFI_SSID,
             .password = WIFI_PASS,
             .threshold.authmode = WIFI_AUTH_WPA2_PSK,
-            
+
             .pmf_cfg = {
-            	.capable = true,
-            	.required = true
-        	},
+                .capable = true,
+                .required = true},
         },
     };
 
     // Set WiFi Configuration
     ESP_ERROR_CHECK(esp_wifi_set_config(
         WIFI_IF_STA,
-        &wifi_config
-    ));
+        &wifi_config));
 
     ESP_ERROR_CHECK(esp_wifi_start());
 
     printf("Esp32 wi-fi started\n");
+
+    return APP_OK;
+}
+
+app_status_t wifi_retry()
+{
+
+    esp_wifi_connect();
 
     return APP_OK;
 }

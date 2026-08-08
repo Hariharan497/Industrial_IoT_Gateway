@@ -17,6 +17,8 @@ typedef enum
     APP_EVENT_WIFI_CONNECTED,
     APP_EVENT_WIFI_CONNECTING,
     APP_EVENT_WIFI_DISCONNECTED,
+    APP_EVENT_WIFI_GET_CONFIG,
+    APP_EVENT_WIFI_SET_CONFIG,
     //
 
     // SENSOR EVENT
@@ -39,6 +41,8 @@ typedef enum
     APP_EVENT_MQTT_START,
     APP_EVENT_MQTT_STOP,
     APP_EVENT_MQTT_ERROR,
+    APP_EVENT_MQTT_GET_CONFIG,
+    APP_EVENT_MQTT_SET_CONFIG,
     //
 
     // DISPLAY EVENT
@@ -61,6 +65,8 @@ typedef enum
     APP_EVENT_MENU_LOAD,
     //
 
+    APP_EVENT_UART_COMMAND
+
 }app_event_t;
 
 typedef union 
@@ -68,6 +74,8 @@ typedef union
     display_frame_t display;
 
     menu_frame_t menu;
+
+    char uart_command[20];
     
 }app_event_data_t;
 

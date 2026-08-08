@@ -7,5 +7,6 @@
 app_status_t wifi_init(void);
 app_status_t wifi_scan(void);
 app_status_t wifi_start(void);
+app_status_t wifi_retry();
 
 #endif

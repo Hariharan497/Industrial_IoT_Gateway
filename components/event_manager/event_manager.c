@@ -77,7 +77,7 @@ app_status_t event_manager_init(void)
         return APP_INVALID_PARAMETER;
     }
 
-    if(xQueueSend(s_event_queue, event, 0 ) != pdPASS){
+    if(xQueueSend(s_event_queue, event, pdMS_TO_TICKS(100) ) != pdPASS){
         return APP_QUEUE_FULL;
     }
 
