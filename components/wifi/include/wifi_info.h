@@ -29,5 +29,12 @@ typedef struct
     wifi_state_t state;
 }wifi_info_t;
 
+typedef struct 
+{
+    char ssid[32];
+    char password[64];
+
+}get_wifi_config_t;
+
 
 #endif

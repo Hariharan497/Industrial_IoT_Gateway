@@ -5,5 +5,8 @@
 #include "app_event.h"
 
 app_status_t uart_manager_init();
+app_status_t uart_manager_send(
+    const char *data
+);
 
 #endif

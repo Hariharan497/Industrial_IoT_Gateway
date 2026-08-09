@@ -11,4 +11,6 @@ idf_component_register(SRCS "main.c"
                     wifi
                     mqtt_manager
                     uart_manager
+                    sensor_manager
+                    response_manager
                     )

@@ -17,7 +17,6 @@
 #include "esp_event.h"
 #include "esp_log.h"
 
-
 #include "lwip/err.h"
 #include "lwip/sys.h"
 #include <stdint.h>
@@ -25,14 +24,24 @@
 #include <string.h>
 #include "event_manager.h"
 #include "wifi_info.h"
+#include "nvs_manager.h"
 
 #define TAG "WI-FI"
 
-// WiFi Credentials
-#define WIFI_SSID "HARIHARAN"
-#define WIFI_PASS "thanya02"
-
 static wifi_info_t wifi_info;
+esp_err_t ret;
+
+static app_status_t get(char *namespace, char *key, char *g_ssid, int size)
+{
+    ret = nvs_manager_read_string(namespace, key, g_ssid, size);
+
+    if (ret != ESP_OK)
+    {
+        ESP_LOGI(TAG, "INVALIED ");
+        return APP_ERROR;
+    }
+    return APP_OK;
+}
 
 // WiFi Event Handler
 static void wifi_event_handler(
@@ -178,8 +187,6 @@ app_status_t wifi_init()
     //     nvs_flash_init();
     // };
 
-
-
     // Initialize TCP/IP Stack
     ESP_ERROR_CHECK(esp_netif_init());
 
@@ -218,11 +225,23 @@ app_status_t wifi_start()
 {
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
 
+    get_wifi_config_t wifi_config_data = {0};
+
+    get("wifi","ssid",wifi_config_data.ssid, sizeof(wifi_config_data.ssid));
+    get("wifi","password",wifi_config_data.password, sizeof(wifi_config_data.password));
+
+    //get_ssid(&wifi_ssid, sizeof(wifi_ssid));
+    //get_pwd(&wifi_password, sizeof(wifi_password));
+
+    ESP_LOGI(TAG, "SSID = [%s]",
+             (char *)wifi_config_data.ssid);
+
+    ESP_LOGI(TAG, "SSID length = %d",
+             strlen((char *)wifi_config_data.ssid));
+
     // WiFi Configuration
     wifi_config_t wifi_config = {
         .sta = {
-            .ssid = WIFI_SSID,
-            .password = WIFI_PASS,
             .threshold.authmode = WIFI_AUTH_WPA2_PSK,
 
             .pmf_cfg = {
@@ -230,6 +249,24 @@ app_status_t wifi_start()
                 .required = true},
         },
     };
+    memset(wifi_config.sta.ssid, 0, sizeof(wifi_config.sta.ssid));
+    memset(wifi_config.sta.password, 0, sizeof(wifi_config.sta.password));
+
+    memcpy(
+        wifi_config.sta.ssid,
+        wifi_config_data.ssid,
+        strlen(wifi_config_data.ssid));
+
+    memcpy(
+        wifi_config.sta.password,
+        wifi_config_data.password,
+        strlen(wifi_config_data.password));
+
+    ESP_LOGI(TAG, "SSID = [%s]",
+             (char *)wifi_config.sta.ssid);
+
+    ESP_LOGI(TAG, "SSID length = %d",
+             strlen((char *)wifi_config.sta.ssid));
 
     // Set WiFi Configuration
     ESP_ERROR_CHECK(esp_wifi_set_config(

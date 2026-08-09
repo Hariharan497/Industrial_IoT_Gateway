@@ -14,6 +14,9 @@
 #include "nvs_manager.h"
 #include "nvs.h"
 #include "string.h"
+#include "sensor_manager.h"
+
+#define TAG "APP"
 
 static bool I_WIWFI_CONNECETD = false;
 
@@ -79,6 +82,9 @@ app_status_t application_stop(void)
 app_status_t application_task(void *arg)
 {
     app_event_msg_t event;
+    esp_err_t ret;
+    wifi_config_t set_wifi_config;
+    get_wifi_config_t get_wifi_config = {0};
 
     while (1)
     {
@@ -124,6 +130,7 @@ app_status_t application_task(void *arg)
             log_write(LOG_INFO, "APP", "BUTTON OK PRESSED");
             menu_ok();
             // vTaskDelay(pdMS_TO_TICKS(100));
+
             wifi_start();
             break;
         }
@@ -132,6 +139,14 @@ app_status_t application_task(void *arg)
         {
             application_display_handle(&event.data.display);
             // I_WIWFI_CONNECETD = true;
+
+            app_status_t ret = mqtt_init();
+
+            if (ret != APP_OK)
+            {
+                ESP_LOGI(TAG, "MQTT INITIALIZATION FAILED");
+                break;
+            }
 
             mqtt_start();
 
@@ -156,20 +171,110 @@ app_status_t application_task(void *arg)
 
         case APP_EVENT_UART_COMMAND:
         {
-            if (strcmp(event.data.uart_command, "GET_WIFI_CONFIG") == 0)
-            {
-                ESP_LOGI("UART_CMD","TEST");
-                char message[32];
-                esp_err_t ret = nvs_manager_read_string("wifi", "ssid", message, sizeof(message));
 
-                if (ret != ESP_OK)
+            if (strncmp(event.data.uart_command, "GET", 3) == 0 ||
+                strncmp(event.data.uart_command, "SET", 3) == 0)
+            {
+                ESP_LOGI("uart command", "GET command");
+                char *command;
+                char *ssid;
+                char *password;
+
+                command = strtok(event.data.uart_command, "|");
+                ssid = strtok(NULL, "|");
+                password = strtok(NULL, "|");
+
+                if (strcmp(command, "GET_WIFI_CONFIG") == 0)
                 {
-                    if (ret == ESP_ERR_NVS_NOT_FOUND)
+
+                    ret = nvs_manager_read_string("wifi", "ssid", get_wifi_config.ssid, sizeof(get_wifi_config.ssid));
+                    ESP_LOGI("UART NVS SSID :", "%s", get_wifi_config.ssid);
+
+                    if (ret != ESP_OK)
                     {
-                        ESP_LOGI(
-                            "UART COMMAND", "WIFI NOT FOUNDED");
+                        if (ret == ESP_ERR_NVS_NOT_FOUND)
+                        {
+                            ESP_LOGE("wifi ssid", "null");
+                        }
                     }
+
+                    ESP_LOGI("WIFI_GET_CONFIG SSID", "%s", get_wifi_config.ssid);
+
+                    ret = nvs_manager_read_string("wifi", "password", get_wifi_config.password, sizeof(get_wifi_config.password));
+                    ESP_LOGI("UART NVS PASSWORD :", "%s", get_wifi_config.password);
+
+                    if (ret != ESP_OK)
+                    {
+                        if (ret == ESP_ERR_NVS_NOT_FOUND)
+                        {
+                            ESP_LOGE("wifi ssid", "null");
+                        }
+                    }
+
+                    ESP_LOGI("WIFI_GET_CONFIG PASSWORD", "%s", get_wifi_config.password);
                 }
+                else if (strcmp(command, "SET_WIFI_CONFIG") == 0)
+                {
+                    ESP_LOGI("UART SET CMD", "TEST");
+
+                    if (command == NULL ||
+                        ssid == NULL ||
+                        password == NULL)
+                    {
+                        ESP_LOGW("APP", "Invalid SET_WIFI frame");
+                        break;
+                    }
+
+                    if (strlen(ssid) >= sizeof(set_wifi_config.sta.ssid))
+                    {
+                        ESP_LOGW("APP", "SSID too long");
+                        break;
+                    }
+
+                    if (strlen(password) >= sizeof(set_wifi_config.sta.password))
+                    {
+                        ESP_LOGW("APP", "Password too long");
+                        break;
+                    }
+
+                    // strcpy((wifi_config.sta.ssid), ssid);
+                    // strcpy(wifi_config.sta.password, password);
+                    ESP_LOGI("WIFI_GET_CONFIG SSID", "%s", ssid);
+
+                    ret = nvs_manager_write_string("wifi", "ssid", ssid);
+
+                    if (ret != ESP_OK)
+                    {
+                        ESP_LOGI("UART SET SSID :", "EROOR");
+                        break;
+                    }
+
+                    ret = nvs_manager_write_string("wifi", "password", password);
+
+                    if (ret != ESP_OK)
+                    {
+                        ESP_LOGI("UART SET PASSWORD :", "EROOR");
+                        break;
+                    }
+
+                    ESP_LOGI("UART SET CONFIG", "succesfully saved");
+                }
+            }
+            else if (strcmp(event.data.uart_command, "START_SENSOR") == 0)
+            {
+                sensor_manager_start();
+            }
+            else if (strcmp(event.data.uart_command,"STOP_SENSOR") == 0)
+            {
+                sensor_manager_stop();
+            }
+            else if (strcmp(event.data.uart_command, "NVS_FLASH") == 0)
+            {
+                app_event_msg_t event_fact;
+
+                event_fact.event = APP_EVENT_FACTORY_RESET_CONFIRM;
+
+                event_manager_post(&event_fact);
             }
 
             break;
@@ -183,6 +288,15 @@ app_status_t application_task(void *arg)
 
         case APP_EVENT_FACTORY_RESET_CONFIRM:
         {
+            ret = nvs_manager_erase_namespace("wifi");
+
+            if (ret != APP_OK)
+            {
+                ESP_LOGI("APP", "NVS EARESE IS FAILED");
+            }
+
+            ESP_LOGI("APP", "NVS EARESE IS SUCCESFULLY");
+            memset(&get_wifi_config, 0, sizeof(get_wifi_config));
             break;
         }
 

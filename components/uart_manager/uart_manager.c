@@ -135,3 +135,22 @@ app_status_t uart_manager_init(void)
 
     return APP_OK;
 }
+
+app_status_t uart_manager_send(
+    const char *data)
+{
+    if (data == NULL)
+    {
+        return APP_INVALID_PARAMETER;
+    }
+
+    int len = strlen(data);
+
+    uart_write_bytes(
+        UART_PORT,
+        data,
+        len
+    );
+
+    return APP_OK;
+}

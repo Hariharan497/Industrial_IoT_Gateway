@@ -12,6 +12,7 @@
 #include "wifi.h"
 #include "mqtt_manager.h"
 #include "uart_manager.h"
+#include "sensor_manager.h"
 
 void app_main(void)
 {
@@ -48,23 +49,10 @@ void app_main(void)
 
     wifi_init();
 
-    mqtt_init();
+    //mqtt_init();
 
     uart_manager_init();
 
+    sensor_manager_init();
 
-    nvs_manager_write_string(
-        "test",
-        "message",
-        "Hello NVS");
-
-    char message[32];
-
-    nvs_manager_read_string(
-        "test",
-        "message",
-        message,
-        sizeof(message));
-
-    ESP_LOGI("APP", "NVS DATA: %s", message);
 }

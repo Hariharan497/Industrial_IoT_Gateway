@@ -21,5 +21,7 @@ app_status_t nvs_manager_read_string(
     size_t value_size
 );
 
+app_status_t nvs_manager_erase_namespace(const char *namespace_name);
+
 
 #endif

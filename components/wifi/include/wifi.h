@@ -3,6 +3,7 @@
 
 #include "app_event.h"
 #include "app_type.h"
+#include "esp_wifi.h"
 
 app_status_t wifi_init(void);
 app_status_t wifi_scan(void);

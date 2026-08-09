@@ -106,3 +106,35 @@ app_status_t nvs_manager_read_string(
 
     return APP_OK;
 }
+
+app_status_t nvs_manager_erase_namespace(const char *namespace_name)
+{
+    nvs_handle_t handle;
+
+    esp_err_t ret = nvs_open(
+        namespace_name,
+        NVS_READWRITE,
+        &handle
+    );
+
+    if (ret != ESP_OK)
+    {
+        return APP_ERROR;
+    }
+
+    ret = nvs_erase_all(handle);
+
+    if (ret == ESP_OK)
+    {
+        ret = nvs_commit(handle);
+    }
+
+    nvs_close(handle);
+
+    if (ret != ESP_OK)
+    {
+        return APP_ERROR;
+    }
+
+    return APP_OK;
+}
